@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="本地 X 多账号矩阵运营管理看板">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2310182a'/%3E%3Cpath d='M18 16h9l8 11 9-11h5L38 31l11 17h-9L31 36 21 48h-5l12-16z' fill='white'/%3E%3C/svg%3E">
+    <title>X Ops · 多账号运营看板</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="主导航">
+        <a class="brand" href="#overview" aria-label="X Ops 首页">
+          <span class="brand-mark">X</span>
+          <span><b>X Ops</b><small>运营数据中心</small></span>
+        </a>
+
+        <nav class="nav-list">
+          <p class="nav-label">工作台</p>
+          <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span>总览</button>
+          <button class="nav-item" data-view="accounts"><span class="nav-icon">◎</span>账号对比</button>
+          <button class="nav-item" data-view="posts"><span class="nav-icon">▤</span>帖子分析</button>
+          <button class="nav-item" data-view="replies"><span class="nav-icon">↳</span>蹭评论分析</button>
+          <p class="nav-label">管理</p>
+          <button class="nav-item" data-view="health"><span class="nav-icon">♡</span>采集健康<span class="nav-count" hidden></span></button>
+          <button class="nav-item" data-view="targets"><span class="nav-icon">◇</span>目标管理</button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="session-mini" id="sidebarSession">
+            <span class="status-dot warn"></span>
+            <div><b>observer-default</b><small>正在检查状态</small></div>
+          </div>
+          <div class="user-mini">
+            <span class="avatar">管</span>
+            <div><b>本地管理员</b><small>管理面板用户</small></div>
+            <button class="dots" aria-label="账号菜单">•••</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow" id="dataModeBadge"><span class="live-dot"></span>真实数据 · 本地服务</div>
+            <h1 id="pageTitle">运营总览</h1>
+          </div>
+          <div class="top-actions">
+            <label class="mode-switch"><span>数据源</span><select id="dataMode"><option value="real" selected>真实数据</option><option value="demo">演示数据</option></select></label>
+            <span class="refresh-status" id="refreshStatus"><span class="status-dot ok"></span>正在连接</span>
+            <button class="icon-button" id="notificationButton" aria-label="查看通知">♧<span class="notification-dot"></span></button>
+            <button class="primary-button" id="exportButton"><span>⇩</span>导出数据</button>
+          </div>
+        </header>
+
+        <section class="global-filters" aria-label="全局筛选">
+          <div class="period-tabs" role="tablist" aria-label="时间范围">
+            <button data-period="7">7 天</button>
+            <button class="active" data-period="30">30 天</button>
+            <button data-period="90">90 天</button>
+            <button data-period="custom">自定义</button>
+          </div>
+          <div class="filter-spacer"></div>
+          <label class="select-wrap"><span>账号</span><select id="accountFilter"><option value="all">全部账号</option></select></label>
+          <label class="select-wrap"><span>负责人</span><select id="ownerFilter"><option value="all">全部负责人</option></select></label>
+          <label class="select-wrap"><span>团队</span><select id="teamFilter"><option value="all">全部团队</option></select></label>
+          <label class="select-wrap"><span>分类</span><select id="groupFilter"><option value="all">全部分类</option></select></label>
+          <label class="select-wrap"><span>语言</span><select id="languageFilter"><option value="all">全部语言</option></select></label>
+          <button class="filter-button" id="moreFilters">☷<span>筛选</span><i id="filterCount">0</i></button>
+        </section>
+
+        <div id="alertBanner" class="alert-banner">
+          <span class="alert-icon">!</span>
+          <div><b id="alertTitle">正在检查采集状态</b><p id="alertText">请稍候。</p></div>
+          <button class="text-button" data-view-jump="health">查看详情 →</button>
+          <button class="close-alert" aria-label="关闭提醒">×</button>
+        </div>
+
+        <section class="setup-panel" id="setupPanel">
+          <div class="setup-copy"><span>首次设置与日常采集</span><b id="setupHeadline">正在连接本地服务</b><p>采集账号只读取公开数据；一个采集账号可监控多个账号，不会登录或控制被监控账号。</p></div>
+          <div class="setup-status" id="setupStatus"></div>
+          <div class="setup-actions">
+            <button class="secondary-button" id="loginCollector">登录采集账号</button>
+            <button class="secondary-button" id="addAccount">＋ 添加监控账号</button>
+            <button class="primary-button" id="collectAll">↻ 采集全部账号</button>
+          </div>
+        </section>
+
+        <div class="real-empty" id="realEmpty" hidden><b>尚未完成真实数据采集。</b><span>请先登录采集账号、添加监控账号并开始采集。</span></div>
+
+        <section class="view active" id="view-overview" data-title="运营总览">
+          <div class="section-intro">
+            <div><h2>关键指标</h2><p id="overviewRange">最近 30 天 · UTC</p></div>
+            <span class="coverage-pill">数据覆盖率 <b id="overviewCoverage">—</b></span>
+          </div>
+
+          <div class="kpi-grid" id="kpiGrid"></div>
+
+          <div class="dashboard-grid">
+            <article class="card trend-card span-8">
+              <div class="card-head">
+                <div><h3>内容产出与互动趋势</h3><p>每日发帖、蹭评论与公开浏览新增</p></div>
+                <div class="legend"><span><i class="legend-bar blue"></i>发帖</span><span><i class="legend-bar purple"></i>蹭评论</span><span><i class="legend-line"></i>公开浏览</span></div>
+              </div>
+              <div class="chart-summary"><b id="chartTotal">—</b><span>周期公开浏览新增</span><em>尚无真实数据</em></div>
+              <div class="combo-chart" id="comboChart" aria-label="内容产出与互动趋势图"></div>
+            </article>
+
+            <article class="card span-4">
+              <div class="card-head"><div><h3>账号表现排行</h3><p>按公开浏览新增</p></div><button class="text-button" data-view-jump="accounts">全部账号 →</button></div>
+              <div class="ranking-list" id="rankingList"></div>
+            </article>
+
+            <article class="card span-5">
+              <div class="card-head"><div><h3>负责人目标完成率</h3><p>月度综合目标</p></div><button class="ghost-select">完成率⌄</button></div>
+              <div class="owner-goals" id="ownerGoals"></div>
+            </article>
+
+            <article class="card span-4">
+              <div class="card-head"><div><h3>内容结构</h3><p>等待真实数据</p></div><button class="icon-button small" aria-label="更多">•••</button></div>
+              <div class="donut-layout">
+                <div class="donut" aria-label="内容结构圆环图"><div><b>—</b><span>总活动</span></div></div>
+                <div class="donut-legend"><span><i class="dot c1"></i>原创 <b>—</b></span><span><i class="dot c2"></i>引用 <b>—</b></span><span><i class="dot c3"></i>蹭评论 <b>—</b></span><span><i class="dot c4"></i>普通回复 <b>—</b></span><span><i class="dot c5"></i>转发 <b>—</b></span></div>
+              </div>
+            </article>
+
+            <article class="card span-3 health-card">
+              <div class="card-head"><div><h3>采集状态</h3><p>过去 24 小时</p></div><span class="health-score">—</span></div>
+              <div class="health-ring"><div><b>—</b><span>任务成功率</span></div></div>
+              <div class="health-stats"><span><b>—</b>成功</span><span><b class="danger">—</b>失败</span><span><b class="warn-text">—</b>等待</span></div>
+              <button class="full-secondary" data-view-jump="health">打开采集健康页</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-accounts" data-title="账号对比">
+          <div class="section-intro">
+            <div><h2>账号表现</h2><p>跨账号比较增长、内容效率与目标完成情况</p></div>
+            <div class="inline-actions"><label class="search"><span>⌕</span><input id="accountSearch" placeholder="搜索账号或负责人"></label><button class="secondary-button" data-export="accounts">⇩ 导出 CSV</button></div>
+          </div>
+          <div class="mini-kpis" id="accountKpis"></div>
+          <article class="table-card">
+            <div class="table-toolbar"><span id="accountCount">共 0 个账号</span><div><button class="chip active">全部</button><button class="chip" id="addAccountInline">＋ 添加账号</button></div></div>
+            <div class="table-scroll"><table><thead><tr><th>账号</th><th>负责人</th><th data-sort="followers">粉丝量 ↕</th><th data-sort="growth">粉丝增量 ↕</th><th>原创帖</th><th>蹭评论</th><th>有效率</th><th data-sort="views">公开浏览新增 ↕</th><th>目标完成</th><th>数据覆盖</th><th></th></tr></thead><tbody id="accountTableBody"></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="view" id="view-posts" data-title="帖子分析">
+          <div class="section-intro"><div><h2>帖子表现</h2><p>持续跟踪活跃帖子的累计指标和近期增长</p></div><div class="inline-actions"><label class="search"><span>⌕</span><input id="postSearch" placeholder="搜索正文或账号"></label><button class="secondary-button" data-export="posts">⇩ 导出 CSV</button></div></div>
+          <div class="subfilters"><button class="chip active" data-post-filter="ALL">全部</button><button class="chip" data-post-filter="ORIGINAL">原创</button><button class="chip" data-post-filter="REPLY">回复</button><button class="chip" data-post-filter="QUOTE">引用</button><button class="chip" data-post-filter="REPOST">转发</button><span></span><button class="chip" id="missingPosts">数据缺失</button></div>
+          <article class="table-card"><div class="table-scroll"><table class="posts-table"><thead><tr><th>帖子</th><th>类型</th><th>累计浏览</th><th>近 24h</th><th>点赞</th><th>回复</th><th>互动率</th><th>完整度</th><th></th></tr></thead><tbody id="postTableBody"></tbody></table></div></article>
+        </section>
+
+        <section class="view" id="view-replies" data-title="蹭评论分析">
+          <div class="section-intro"><div><h2>蹭评论效果</h2><p>仅统计根帖子作者不是当前管理账号的可确认回复</p></div><button class="secondary-button" data-export="replies">⇩ 导出 CSV</button></div>
+          <div class="mini-kpis six" id="replyKpis"></div>
+          <div class="dashboard-grid">
+            <article class="card span-7"><div class="card-head"><div><h3>目标账号效果</h3><p>评论数量与平均评论浏览</p></div><span class="coverage-pill" id="replyTargetCount">目标账号 —</span></div><div class="target-chart" id="targetChart"></div></article>
+            <article class="card span-5"><div class="card-head"><div><h3>发布时间差</h3><p>越早回复通常获得更多曝光</p></div><button class="ghost-select">平均浏览⌄</button></div><div class="scatter-chart" id="scatterChart"></div></article>
+          </div>
+          <article class="table-card spaced"><div class="table-toolbar"><b>蹭评论明细</b><span id="replySummary">等待真实数据</span></div><div class="table-scroll"><table><thead><tr><th>评论账号</th><th>评论内容</th><th>原帖账号</th><th>时间差</th><th>原帖浏览</th><th>评论浏览</th><th>互动</th><th>状态</th><th></th></tr></thead><tbody id="replyTableBody"></tbody></table></div></article>
+        </section>
+
+        <section class="view" id="view-health" data-title="采集健康">
+          <div class="section-intro"><div><h2>采集健康</h2><p>会话、任务、字段覆盖和数据延迟监控</p></div><button class="primary-button" id="retryFailed">↻ 重试失败任务</button></div>
+          <div class="health-overview"><div class="health-hero"><span>24 小时任务成功率</span><b>—</b><small>等待真实任务数据</small></div><div><span>24h 任务</span><b>—</b><small>等待真实任务数据</small></div><div><span>待处理问题</span><b>—</b><small>等待真实任务数据</small></div><div><span>当前任务</span><b>—</b><small>等待真实任务数据</small></div><div><span>最近成功</span><b>—</b><small>尚无</small></div></div>
+          <div class="dashboard-grid">
+            <article class="card span-7"><div class="card-head"><div><h3>采集会话</h3><p>Storage State 不在前端展示</p></div><button class="text-button">登录说明</button></div><div class="session-list" id="sessionList"></div></article>
+            <article class="card span-5"><div class="card-head"><div><h3>异常提醒</h3><p>需要管理员关注</p></div><span class="nav-count flat" id="issueCount" hidden></span></div><div class="issue-list" id="issueList"></div></article>
+          </div>
+          <article class="table-card spaced"><div class="table-toolbar"><b>最近任务</b><div><button class="chip active">全部</button><button class="chip">失败</button><button class="chip">运行中</button></div></div><div class="table-scroll"><table><thead><tr><th>任务</th><th>账号</th><th>会话</th><th>计划时间</th><th>耗时</th><th>写入记录</th><th>状态</th><th></th></tr></thead><tbody id="jobTableBody"></tbody></table></div></article>
+        </section>
+
+        <section class="view" id="view-targets" data-title="目标管理">
+          <div class="empty-state"><span>◇</span><h2>目标管理</h2><p id="targetSummary">重点互动账号和日、周、月运营目标保存在本地数据库。</p><button class="primary-button" id="mockTarget">查看目标配置说明</button></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+        <div id="modalContent"></div>
+      </section>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

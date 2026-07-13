@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Runtime and cache
+*.pid
+.mypy_cache/
+.ruff_cache/
+
+# Editor settings
+.vscode/
+.idea/

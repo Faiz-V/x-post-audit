@@ -1,70 +1,83 @@
-使用方法
+# x-post-audit · X Ops 看板前端原型
 
-1. 双击 start.command。
-2. 在打开的面板中点击“登录采集账号”。
-3. 完成 X 登录。
-4. 添加需要监控的账号。
-5. 点击“采集全部账号”。
-6. 在看板中查看运营数据。
+一个用于演示 X 多账号运营信息布局的静态网页：查看内置示例中的账号、帖子、回复和趋势，并导出演示 CSV。
 
-## 普通用户说明
+**Static X operations dashboard prototype with bundled demo data. No backend or X collector is included.**
 
-首次启动会自动创建本地运行环境、安装依赖和 Chromium、生成加密密钥、初始化 SQLite，并打开 `http://127.0.0.1:8765`。不需要安装 Docker、配置 PostgreSQL、编辑 `.env` 或执行命令行工具。
+> 仓库保留历史名称 `x-post-audit`，页面标题为「X Ops」。当前代码不是发帖文本/图片审核工具，也不是开箱即用的 X 采集系统。界面中的登录、数据库和采集控件只是客户端接口入口，不代表对应服务已实现。
 
-采集账号仅用于读取公开数据。一个公司授权的采集账号可以监控多个公开 X 账号；被监控账号不需要在本机登录，也不会被面板控制。登录有效期间，关闭再启动系统会复用本机加密保存的 Session。
+## 解决什么问题
 
-停止服务时双击 `stop.command`。停止不会删除数据库、登录 Session、账号配置、目标配置或历史快照。
+用于讨论多账号运营看板的信息结构和展示方式：哪些指标放在总览，如何比较账号，以及如何展示帖子、外部回复和数据缺失。适合产品原型演示与前端阅读，不适合直接监控真实账号或衡量真实运营效果。
 
-## 面板操作
+## 本地运行
 
-- “登录采集账号”：打开有界面的 Chromium，由用户手动输入 X 凭据并自行完成验证码或安全验证。系统不保存密码。
-- “添加监控账号”：支持用户名、`@username`、x.com/twitter.com 链接、批量粘贴和 CSV 的 `username` 列。
-- “采集全部账号”：使用同一个 `observer-default` Session 依次采集所有启用账号。某个账号失败不会中断其他账号；Session 失效会暂停任务并提示重新登录。
-- 账号对比、帖子分析、蹭评论分析和采集健康：默认读取真实 SQLite 数据。
-- 数据源选择：“真实数据”为默认值；“演示数据”会持续显示醒目标识，且不会写入真实指标。
-- CSV：账号、帖子、蹭评论均可导出。空白表示当前无法获取，数字 `0` 只表示已确认的零值。
+需要现代桌面浏览器，以及 Python 3（仅用于提供静态文件）。没有 npm 依赖、构建步骤或数据库初始化。
 
-真实数据库没有采集结果时，面板会明确显示：
+```sh
+git clone https://github.com/Faiz-V/x-post-audit.git
+cd x-post-audit
+python -m http.server 8765 --bind 127.0.0.1
+```
 
-> 尚未完成真实数据采集。请先登录采集账号、添加监控账号并开始采集。
+macOS/Linux 如果命令名为 `python3`，将上面的 `python` 替换为 `python3`；Windows 也可使用 `py -3`。
 
-## 数据范围与限制
+1. 打开 **http://127.0.0.1:8765/**。
+2. 页面默认选择「真实数据」，会显示「本地服务连接失败」或 404。这是缺少后端的预期结果，不是需要登录 X。
+3. 在右上角「数据源」选择 **「演示数据」**，看到「演示数据 · 不代表真实采集结果」和演示水印后开始浏览。
+4. 使用左侧导航切换总览、账号对比、帖子分析、蹭评论分析、采集健康和目标管理。
+5. 账号页支持搜索账号或负责人；帖子页支持搜索正文/账号和按类型筛选。「导出 CSV」下载带 `DEMO` 标记的内置样例。
+6. 在启动服务器的终端按 `Ctrl+C` 停止。
 
-系统使用 Playwright 正常打开 X 页面，优先解析页面自然产生的结构化网络响应，并以 DOM 可见数据作为备用。不接入 X 官方 API，不构造或重放未公开 GraphQL 请求，不自动填写凭据，不绕过验证码、安全挑战或限流，也不使用代理或采集账号自动轮换。
+请先用桌面宽度体验：当前 CSS 在不超过 620px 时会隐藏数据源选择器。刷新页面后需要重新选择演示数据。
 
-支持公开账号资料、公开帖子/回复/引用/转发、公开浏览、点赞、评论、转发、引用、页面可获得的收藏和粉丝数据。以下数据无法保证：私有 Analytics、链接点击、主页访问、关注来源、广告、私信、受保护账号内容和仅所有者可见指标。页面没有返回的浏览或收藏保存为 `NULL`，不会推算成 `0`。
+## 当前真实功能
 
-Storage State 使用 AES-256-GCM 加密后保存在本机。密钥位于 `backend/data/session.key`，数据库位于 `backend/data/x_dashboard.db`，日志位于 `backend/data/logs/app.log`。这些文件均被 Git 忽略。前端和日志不会输出 Cookie、Token 或 Storage State。
+| 功能 | 当前范围 |
+|---|---|
+| 总览与图表 | 渲染 `app.js` 中固定的 `DEMO` 示例，不是实时指标 |
+| 账号对比 | 3 个内置账号样例，支持本地搜索 |
+| 帖子与回复 | 2 条帖子、1 条外部回复样例；帖子搜索和类型筛选可用 |
+| CSV 导出 | 在浏览器中导出样例对象，文件名及首行带 `DEMO` 标记 |
+| 采集健康、目标管理 | 展示样例状态或空状态，不执行实际任务 |
+| 真实数据模式 | 发起同源 `/api/...` 请求；本仓库没有这些接口的实现 |
 
-X 页面结构、字段开放范围和登录策略可能变化。遇到 Session 过期、安全挑战、限流、受保护账号、账号不存在或页面结构变化时，面板会保留历史数据并显示失败状态。
+示例中的名称、日期、浏览量、粉丝量及 `READY` /「已登录」状态都只是演示字段，不能当作用户量、效果证明或实际连接状态。
 
-## 开发者说明
-
-技术栈：FastAPI、SQLAlchemy、SQLite（默认，可通过 `DATABASE_URL` 切换 PostgreSQL）、Playwright Chromium，以及现有 HTML/CSS/JavaScript 前端。
+## 技术实现与目录
 
 ```text
-twitter/
-├── start.command / stop.command
-├── index.html / app.js / styles.css
-├── backend/
-│   ├── data/                       # 本地数据库、密钥和日志，不提交
-│   ├── migrations/                 # PostgreSQL 迁移保留
-│   ├── src/x_dashboard/
-│   │   ├── api/ collectors/ extractors/ models/ repositories/
-│   │   ├── scheduler/ security/ services/
-│   │   └── main.py
-│   └── tests/
-└── fixtures/                       # 虚构脱敏测试数据
+index.html       页面结构与控件
+styles.css       布局、响应式样式与 Google Fonts 引用
+app.js           内置 DEMO、DOM 渲染、搜索、CSV 及未实现后端的请求入口
+assets/README.md 真实截图的补充要求
+LICENSE          仓库现有 MIT 许可证
 ```
 
-开发检查：
+代码使用原生 HTML、CSS、JavaScript。演示数据通过内存中的对象渲染；CSV 使用 `Blob` 生成。真实模式的 `fetch` 和 `EventSource` 调用不等于后端实现。
 
-```bash
-cd /Users/levies/Documents/twitter
-backend/.venv/bin/ruff format --check backend/src backend/tests backend/migrations
-backend/.venv/bin/ruff check backend/src backend/tests backend/migrations
-backend/.venv/bin/mypy backend/src
-backend/.venv/bin/pytest backend/tests
-```
+本仓库**没有** `start.command`、`stop.command`、`backend/`、FastAPI、SQLAlchemy、SQLite、Playwright、X 登录实现或账号采集器。旧版 README 中关于自动安装 Chromium、加密保存 Session、采集账号和数据库的说明不适用于本仓库。
 
-本地服务默认只监听 `127.0.0.1:8765`。开发者仍可设置 `.env` 中的 `DATABASE_URL`、采集频率、超时、滚动次数和指标覆盖帖子数；普通运营用户无需编辑这些配置。
+## 隐私与数据处理
+
+- 体验演示不需要 API Key、Cookie、X 账号或任何登录凭据；不要为运行这个原型提供它们。
+- 内置演示数据在浏览器内存中处理；代码没有使用 `localStorage` 或数据库保存演示修改。导出的 CSV 保存在浏览器下载位置。
+- 真实模式会请求当前站点的 `/api/...` 路径，部分表单会尝试发送填写的信息。不要把真实业务资料输入这些未配套后端的控件。
+- `styles.css` 从 Google Fonts 加载字体，会产生外部网络请求；字体不可用时使用系统字体。不能将整个页面描述为完全离线或零网络请求。
+- 本仓库没有实现 Session 加密或登录安全机制。
+
+## 功能限制
+
+- 登录、添加/保存账号、真实采集、重试任务、目标保存和真实数据导出不可用。
+- 演示日期范围和全局账号/负责人筛选不会重新计算一套对应数据；不要据此推断分析能力。
+- 部分表头排序、更多菜单和管理控件尚未实现；内容结构圆环的比例是 CSS 固定值。
+- 切换演示模式后，页面仍可能保留「本地服务连接失败」「真实口径」等历史文案。顶部演示标识是判断数据性质的依据。
+- 本轮验证了桌面浏览器中的演示切换、六个视图、账号搜索和帖子类型筛选；没有后端集成测试、自动化测试套件或 CI。
+
+## 截图与维护状态
+
+**状态：Historical prototype / 历史前端原型。** 当前仓库未提供正式 Release 或生产可用承诺。
+
+当前尚无经过整理的产品截图。后续真实截图应放在 [`assets/`](assets/README.md)，保留演示标识并注明版本；不要使用生成式假界面或将演示数字作为运营成绩。
+
+问题和文档修正可通过 [Issues](https://github.com/Faiz-V/x-post-audit/issues) 提交。代码授权以现有 [LICENSE](LICENSE) 为准；示例中的第三方名称不代表关联或背书。
